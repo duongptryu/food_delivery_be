@@ -7,30 +7,39 @@ import (
 	"food_delivery_be/modules/restaurant/restaurantmodel"
 	"food_delivery_be/modules/restaurant/restaurantstorage"
 	"github.com/gin-gonic/gin"
-	"net/http"
+	"strconv"
 )
 
-func CreateRestaurant(appCtx component.AppContext) gin.HandlerFunc {
+func UpdateRestaurant(appCtx component.AppContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var data restaurantmodel.RestaurantCreate
+		id, err := strconv.Atoi(c.Param("id"))
+
+		if err != nil {
+			c.JSON(401, gin.H{
+				"error": err,
+			})
+			return
+		}
+
+		var data restaurantmodel.RestaurantUpdate
 
 		if err := c.ShouldBind(&data); err != nil {
 			c.JSON(401, gin.H{
-				"error": err.Error(),
+				"error": err,
 			})
 			return
 		}
 
 		store := restaurantstorage.NewSQLStore(appCtx.GetMainDBConnection())
-		biz := restaurantbiz.NewCreateRestaurantBiz(store)
+		biz := restaurantbiz.NewUpdateRestaurantBiz(store)
 
-		if err := biz.CreateRestaurant(c.Request.Context(), &data); err != nil {
+		if err := biz.UpdateRestaurantBiz(c.Request.Context(), id, &data); err != nil {
 			c.JSON(401, gin.H{
-				"error": err.Error(),
+				"error": err,
 			})
 			return
 		}
 
-		c.JSON(http.StatusOK, common.NewSuccessResponse(data, nil, nil))
+		c.JSON(200, common.SimpleSuccessResponse(true))
 	}
 }

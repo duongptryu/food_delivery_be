@@ -31,75 +31,13 @@ func runServices(db *gorm.DB) {
 	{
 		restaurants.POST("", ginrestaurant.CreateRestaurant(appCtx))
 
-		//restaurants.GET("/:id", func(c *gin.Context) {
-		//	id, err := strconv.Atoi(c.Param("id"))
-		//	if err != nil {
-		//		c.JSON(401, gin.H{
-		//			"error": err.Error(),
-		//		})
-		//		return
-		//	}
-		//
-		//	var data Restaurant
-		//
-		//	if err := db.Where("id = ?", id).First(&data).Error; err != nil {
-		//		c.JSON(401, gin.H{
-		//			"error": err.Error(),
-		//		})
-		//		return
-		//	}
-		//
-		//	c.JSON(http.StatusOK, data)
-		//})
-		//
+		restaurants.GET("/:id", ginrestaurant.GetRestaurant(appCtx))
+
 		restaurants.GET("", ginrestaurant.ListRestaurant(appCtx))
-		//
-		//restaurants.PATCH("/:id", func(c *gin.Context) {
-		//	id, err := strconv.Atoi(c.Param("id"))
-		//	if err != nil {
-		//		c.JSON(401, gin.H{
-		//			"error": err.Error(),
-		//		})
-		//		return
-		//	}
-		//
-		//	var data RestaurantUpdate
-		//
-		//	if err := c.ShouldBind(&data); err != nil {
-		//		c.JSON(401, gin.H{
-		//			"error": err.Error(),
-		//		})
-		//		return
-		//	}
-		//
-		//	if err := db.Where("id = ?", id).Updates(&data).Error; err != nil {
-		//		c.JSON(401, gin.H{
-		//			"error": err.Error(),
-		//		})
-		//		return
-		//	}
-		//
-		//	c.JSON(http.StatusOK, gin.H{"ok": 1})
-		//})
-		//
-		//restaurants.DELETE("/:id", func(c *gin.Context) {
-		//	id, err := strconv.Atoi(c.Param("id"))
-		//	if err != nil {
-		//		c.JSON(401, gin.H{
-		//			"error": err.Error(),
-		//		})
-		//		return
-		//	}
-		//
-		//	if err := db.Table(Restaurant{}.TableName()).Where("id = ?", id).Delete(nil).Error; err != nil {
-		//		c.JSON(401, gin.H{
-		//			"error": err.Error(),
-		//		})
-		//		return
-		//	}
-		//
-		//	c.JSON(http.StatusOK, gin.H{"ok": 1})
-		//})
+
+		restaurants.PATCH("/:id", ginrestaurant.UpdateRestaurant(appCtx))
+
+		restaurants.DELETE("/:id", ginrestaurant.DeleteRestaurant(appCtx))
 	}
 
 	r.Run()
