@@ -2,7 +2,6 @@ package restaurantbiz
 
 import (
 	"context"
-	"errors"
 	"food_delivery_be/common"
 	"food_delivery_be/modules/restaurant/restaurantmodel"
 )
@@ -28,13 +27,13 @@ func (biz *getRestaurant) GetRestaurant(ctx context.Context, id int) (*restauran
 	data, err := biz.Store.FindDataByCondition(ctx, map[string]interface{}{"id": id})
 	if err != nil {
 		if err != common.RecordNotFound {
-			return nil, common.RecordNotFound
+			return nil, common.ErrCannotGetEntity(restaurantmodel.EntityName, err)
 		}
-		return nil, err
+		return nil, common.ErrCannotGetEntity(restaurantmodel.EntityName, err)
 	}
 
 	if data.Status == 0 {
-		return nil, errors.New("Data deleted")
+		return nil, common.ErrCannotDeleteEntity(restaurantmodel.EntityName, err)
 	}
 	return data, err
 }
