@@ -10,10 +10,13 @@ const EntityName = "Restaurant"
 
 type Restaurant struct {
 	common.SQLModel `json:",inline"`
-	Name            string         `json:"name" gorm:"column:name;"`
-	Addr            string         `json:"address" gorm:"column:addr;"`
-	Logo            *common.Image  `json:"logo" gorm:"column:logo;"`
-	Cover           *common.Images `json:"cover" gorm:"column:cover;"`
+	Name            string             `json:"name" gorm:"column:name;"`
+	UserId          int                `json:"_" gorm:"column:owner_id"`
+	Addr            string             `json:"address" gorm:"column:addr;"`
+	Logo            *common.Image      `json:"logo" gorm:"column:logo;"`
+	Cover           *common.Images     `json:"cover" gorm:"column:cover;"`
+	User            *common.SimpleUser `json:"user" gorm:"preload:false"`
+	LikeCount       int                `json:"like_count" gorm:"-"`
 }
 
 func (Restaurant) TableName() string {
@@ -32,11 +35,12 @@ func (RestaurantUpdate) TableName() string {
 }
 
 type RestaurantCreate struct {
-	Id    int            `json:"id" gorm:"column:id;"`
-	Name  string         `json:"name" gorm:"column:name;"`
-	Addr  string         `json:"address" gorm:"column:addr;"`
-	Logo  *common.Image  `json:"logo" gorm:"column:logo;"`
-	Cover *common.Images `json:"cover" gorm:"column:cover;"`
+	common.SQLModel `json:",inlines"`
+	Name            string         `json:"name" gorm:"column:name;"`
+	Addr            string         `json:"address" gorm:"column:addr;"`
+	Logo            *common.Image  `json:"logo" gorm:"column:logo;"`
+	Cover           *common.Images `json:"cover" gorm:"column:cover;"`
+	UserId          int            `json:"_" gorm:"column:owner_id"`
 }
 
 func (RestaurantCreate) TableName() string {
@@ -50,4 +54,16 @@ func (res *RestaurantCreate) Validate() error {
 	}
 
 	return nil
+}
+
+var (
+	ErrNameCannotBeEmpty = common.NewCustomError(nil, "restaurant name can't be blank", "Err")
+)
+
+func (data *Restaurant) Mask(isAdminOrOwner bool) {
+	data.GenUID(common.DbTypeRestaurant)
+
+	if u := data.User; u != nil {
+		u.Mask(isAdminOrOwner)
+	}
 }

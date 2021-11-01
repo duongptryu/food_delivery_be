@@ -46,7 +46,7 @@ func (biz *uploadBiz) Upload(ctx context.Context, data []byte, folder, fileName 
 	fileExt := filepath.Ext(fileName)
 	fileName = fmt.Sprintf("%d%s", time.Now().Nanosecond(), fileExt)
 
-	img, err := biz.provider.SaveFileUploaded(ctx, data, fmt.Sprintf("/%s/%s", folder, fileName))
+	img, err := biz.provider.SaveFileUploaded(ctx, data, fmt.Sprintf("%s/%s", folder, fileName))
 
 	if err != nil {
 		return nil, uploadmodel.ErrCannotSaveFile(err)

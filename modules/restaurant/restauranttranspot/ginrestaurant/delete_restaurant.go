@@ -6,12 +6,13 @@ import (
 	"food_delivery_be/modules/restaurant/restaurantbiz"
 	"food_delivery_be/modules/restaurant/restaurantstorage"
 	"github.com/gin-gonic/gin"
-	"strconv"
 )
 
 func DeleteRestaurant(appCtx component.AppContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, err := strconv.Atoi(c.Param("id"))
+		uid, err := common.FromBase58(c.Param("id"))
+
+		//id, err := strconv.Atoi(c.Param("id"))
 
 		if err != nil {
 			c.JSON(401, gin.H{
@@ -23,7 +24,7 @@ func DeleteRestaurant(appCtx component.AppContext) gin.HandlerFunc {
 		store := restaurantstorage.NewSQLStore(appCtx.GetMainDBConnection())
 		biz := restaurantbiz.NewDeleteRestaurantBiz(store)
 
-		if err := biz.DeleteRestaurantBiz(c.Request.Context(), id); err != nil {
+		if err := biz.DeleteRestaurantBiz(c.Request.Context(), int(uid.GetLocalID())); err != nil {
 			c.JSON(401, gin.H{
 				"error": err,
 			})

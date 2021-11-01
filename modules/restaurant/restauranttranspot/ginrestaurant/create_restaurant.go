@@ -19,6 +19,10 @@ func CreateRestaurant(appCtx component.AppContext) gin.HandlerFunc {
 			return
 		}
 
+		requester := c.MustGet(common.CurrentUser).(common.Requester)
+
+		data.UserId = requester.GetUserId()
+
 		store := restaurantstorage.NewSQLStore(appCtx.GetMainDBConnection())
 		biz := restaurantbiz.NewCreateRestaurantBiz(store)
 
@@ -27,6 +31,8 @@ func CreateRestaurant(appCtx component.AppContext) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, common.NewSuccessResponse(data, nil, nil))
+		data.GenUID(common.DbTypeRestaurant)
+
+		c.JSON(http.StatusOK, common.NewSuccessResponse(data.FakeId.String(), nil, nil))
 	}
 }
