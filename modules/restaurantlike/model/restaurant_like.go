@@ -1,6 +1,7 @@
 package restaurantlikemodel
 
 import (
+	"fmt"
 	"food_delivery_be/common"
 	"time"
 )
@@ -16,4 +17,24 @@ type Like struct {
 
 func (l Like) TableName() string {
 	return "restaurant_likes"
+}
+
+func (l *Like) GetRestaurantId() int {
+	return l.RestaurantId
+}
+
+func ErrUserCannotLikeRestaurant(err error) *common.AppError {
+	return common.NewCustomError(
+		err,
+		fmt.Sprint("Cannot like this restaurant"),
+		fmt.Sprint("ErrUserCannotLikeRestaurant"),
+	)
+}
+
+func ErrUserCannotUnLikeRestaurant(err error) *common.AppError {
+	return common.NewCustomError(
+		err,
+		fmt.Sprint("Cannot unlike this restaurant"),
+		fmt.Sprint("ErrUserCannotUnLikeRestaurant"),
+	)
 }

@@ -10,6 +10,8 @@ import (
 	"food_delivery_be/modules/restaurantlike/transport/ginrestaurantlike"
 	"food_delivery_be/modules/upload/uploadtransport/ginupload"
 	"food_delivery_be/modules/user/usertransport/ginuser"
+	"food_delivery_be/pubsub/pblocal"
+	"food_delivery_be/subscriber"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -40,7 +42,13 @@ func main() {
 }
 
 func runServices(db *gorm.DB, upProvider uploadprovider.UploadProvider, secretKey string) {
-	appCtx := component.NewAppContent(db, upProvider, secretKey)
+	appCtx := component.NewAppContent(db, upProvider, secretKey, pblocal.NewPubSub())
+
+	//subscriber.Setup(appCtx)
+
+	if err := subscriber.NewEngine(appCtx).Start(); err != nil {
+		log.Fatalln(err)
+	}
 
 	r := gin.Default()
 
@@ -63,6 +71,9 @@ func runServices(db *gorm.DB, upProvider uploadprovider.UploadProvider, secretKe
 		restaurants.DELETE("/:id", middleware.RequireAuth(appCtx), ginrestaurant.DeleteRestaurant(appCtx))
 
 		restaurants.GET("/:id/liked-users", middleware.RequireAuth(appCtx), ginrestaurantlike.ListUserLikeRestaurant(appCtx))
+
+		restaurants.POST("/:id/like", middleware.RequireAuth(appCtx), ginrestaurantlike.UserLikeRestaurant(appCtx))
+		restaurants.DELETE("/:id/unlike", middleware.RequireAuth(appCtx), ginrestaurantlike.UserUnLikeRestaurant(appCtx))
 	}
 
 	v1.GET("encode-uid", func(c *gin.Context) {
