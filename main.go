@@ -11,6 +11,7 @@ import (
 	"food_delivery_be/modules/upload/uploadtransport/ginupload"
 	"food_delivery_be/modules/user/usertransport/ginuser"
 	"food_delivery_be/pubsub/pblocal"
+	"food_delivery_be/skio"
 	"food_delivery_be/subscriber"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
@@ -44,15 +45,24 @@ func main() {
 func runServices(db *gorm.DB, upProvider uploadprovider.UploadProvider, secretKey string) {
 	appCtx := component.NewAppContent(db, upProvider, secretKey, pblocal.NewPubSub())
 
+	r := gin.Default()
+
 	//subscriber.Setup(appCtx)
 
-	if err := subscriber.NewEngine(appCtx).Start(); err != nil {
+	//startSocketIOServer(r, appCtx)
+
+	rtEngine := skio.NewEngine()
+	if err := rtEngine.Run(appCtx, r); err != nil {
 		log.Fatalln(err)
 	}
 
-	r := gin.Default()
+	if err := subscriber.NewEngine(appCtx, rtEngine).Start(); err != nil {
+		log.Fatalln(err)
+	}
 
 	r.Use(middleware.Recover(appCtx))
+
+	r.StaticFile("/demo", "./demo.html")
 
 	v1 := r.Group("/v1")
 
@@ -92,3 +102,76 @@ func runServices(db *gorm.DB, upProvider uploadprovider.UploadProvider, secretKe
 
 	r.Run()
 }
+
+//
+//func startSocketIOServer(engine *gin.Engine, appCtx component.AppContext) {
+//	server := socketio.NewServer(&engineio.Options{
+//		Transports: []transport.Transport{websocket.Default},
+//	})
+//
+//	server.OnConnect("/", func(s socketio.Conn) error {
+//		fmt.Println("Connected: ", s.ID(), " Ip: ", s.RemoteAddr())
+//
+//		return nil
+//	})
+//
+//	server.OnError("/", func(s socketio.Conn, e error) {
+//		fmt.Println("meet error ", e)
+//	})
+//
+//	server.OnDisconnect("/", func(s socketio.Conn, reason string) {
+//		fmt.Println("closed: ", reason)
+//	})
+//
+//	server.OnEvent("/", "authenticate", func(s socketio.Conn, token string) {
+//		db := appCtx.GetMainDBConnection()
+//		store := userstorage.NewSQLStore(db)
+//
+//		tokenProvider := jwt.NewTokenJWTProvider(appCtx.SecretKey())
+//
+//		payload, err := tokenProvider.Validate(token)
+//		if err != nil {
+//			s.Emit("authentication_failed", err.Error())
+//			s.Close()
+//			return
+//		}
+//
+//		user, err := store.FindUser(context.Background(), map[string]interface{}{"id": payload.UserId})
+//		if err != nil {
+//			s.Emit("authentication_failed", err.Error())
+//			s.Close()
+//			return
+//		}
+//
+//		if user.Status == 0 {
+//			s.Emit("authentication_failed", "You has been banned/deleted")
+//			s.Close()
+//			return
+//		}
+//
+//		user.Mask(false)
+//
+//		s.Emit("your_profile", user)
+//	})
+//
+//	server.OnEvent("/", "test", func(s socketio.Conn, msg string) {
+//		fmt.Println(msg)
+//	})
+//
+//	type Person struct {
+//		Name string `json:"name"`
+//		Age  int    `json:"age"`
+//	}
+//
+//	server.OnEvent("/", "notice", func(s socketio.Conn, p Person) {
+//		fmt.Println("Server receive notice: ", p.Name, p.Age)
+//
+//		p.Age = 33
+//		s.Emit("notice", p)
+//	})
+//
+//	go server.Serve()
+//
+//	engine.GET("/socket.io/*any", gin.WrapH(server))
+//	engine.POST("/socket.io/*any", gin.WrapH(server))
+//}

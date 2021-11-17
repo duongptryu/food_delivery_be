@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js" integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs" crossorigin="anonymous"></script>-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.8/socket.io.js"></script>
+</head>
+<body>
+<h1>Demo Socket IO</h1>
+</body>
+
+<script>
+    const socket = io("", {transports: ['websocket']})
+    var locTimer = null
+
+    console.log(socket)
+    socket.on("connect", () => {
+        console.log("Client connected")
+
+        // socket.emit("test", "Hello server")
+        //
+        // socket.emit("notice", {name: "Duong", age:21})
+
+        socket.emit("authenticate", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjp7InVzZXJfaWQiOjEsInJvbGUiOiJ1c2VyIn0sImV4cCI6MTYzOTY2ODQwOCwiaWF0IjoxNjM3MDc2NDA4fQ.s9wDTAeCTT_NGe0-mFcwAa0i_5peWxeQcrHMm4n8l4M")
+        //
+        // setInterval(() => {
+        //     socket.emit("UserUpdateLocation", {lat: 10, lng: 106})
+        // }, 3000)
+    })
+
+    socket.on("notice", (p) => {
+        console.log(p)
+    })
+
+    socket.on("authenticated", u => {
+        console.log("User: ", u)
+        //authenticate done
+
+        if (locTimer != null) {
+            clearInterval(locTimer)
+        }
+
+        locTimer = setInterval(() => {
+            socket.emit("UserUpdateLocation", {lat: 10, lng: 106})
+        }, 3000)
+    })
+
+    socket.on("authentication_failed", e => {
+        console.log(e)
+        socket.disconnect()
+    })
+
+    socket.on("TopicUserLikeRestaurant", data => {
+        console.log("TopicUserLikeRestaurant", data)
+    })
+    socket.on("TopicUserDislikeRestaurant", data => {
+        console.log("TopicUserDislikeRestaurant", data)
+    })
+
+    socket.on("your_profile", profile => {
+        console.log(profile)
+    })
+    socket.on("disconnect", () => console.log("Socket is disconnected"))
+</script>
+</html>
