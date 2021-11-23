@@ -1,7 +1,6 @@
 package restaurantmodel
 
 import (
-	"errors"
 	"food_delivery_be/common"
 	"strings"
 )
@@ -50,7 +49,7 @@ func (RestaurantCreate) TableName() string {
 func (res *RestaurantCreate) Validate() error {
 	res.Name = strings.TrimSpace(res.Name)
 	if len(res.Name) == 0 {
-		return errors.New("Restaurant name can not be blank")
+		return ErrNameCannotBeEmpty
 	}
 
 	return nil

@@ -1,15 +1,20 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"food_delivery_be/common"
 	"food_delivery_be/component"
 	"food_delivery_be/component/tokenprovider/jwt"
-	"food_delivery_be/modules/user/userstorage"
+	"food_delivery_be/modules/user/usermodel"
 	"github.com/gin-gonic/gin"
 	"strings"
 )
+
+type AuthenStore interface {
+	FindUser(ctx context.Context, condition map[string]interface{}, moreInfo ...string) (*usermodel.User, error)
+}
 
 func ErrWrongAuthHeader(err error) *common.AppError {
 	return common.NewCustomError(
@@ -29,7 +34,7 @@ func extracTokenFromHeaderString(s string) (string, error) {
 	return parts[1], nil
 }
 
-func RequireAuth(appCtx component.AppContext) func(c *gin.Context) {
+func RequireAuth(appCtx component.AppContext, authenStore AuthenStore) func(c *gin.Context) {
 	tokenProvider := jwt.NewTokenJWTProvider(appCtx.SecretKey())
 	return func(c *gin.Context) {
 		token, err := extracTokenFromHeaderString(c.GetHeader("Authorization"))
@@ -37,15 +42,15 @@ func RequireAuth(appCtx component.AppContext) func(c *gin.Context) {
 			panic(err)
 		}
 
-		db := appCtx.GetMainDBConnection()
-		store := userstorage.NewSQLStore(db)
+		//db := appCtx.GetMainDBConnection()
+		//store := userstorage.NewSQLStore(db)
 
 		payload, err := tokenProvider.Validate(token)
 		if err != nil {
 			panic(err)
 		}
 
-		user, err := store.FindUser(c.Request.Context(), map[string]interface{}{"id": payload.UserId})
+		user, err := authenStore.FindUser(c.Request.Context(), map[string]interface{}{"id": payload.UserId})
 		if err != nil {
 			panic(err)
 		}

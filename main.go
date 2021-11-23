@@ -5,22 +5,36 @@ import (
 	"food_delivery_be/common"
 	"food_delivery_be/component"
 	"food_delivery_be/component/uploadprovider"
+	"food_delivery_be/memcache"
 	"food_delivery_be/middleware"
 	"food_delivery_be/modules/restaurant/restauranttranspot/ginrestaurant"
 	"food_delivery_be/modules/restaurantlike/transport/ginrestaurantlike"
 	"food_delivery_be/modules/upload/uploadtransport/ginupload"
+	"food_delivery_be/modules/user/userstorage"
 	"food_delivery_be/modules/user/usertransport/ginuser"
 	"food_delivery_be/pubsub/pblocal"
 	"food_delivery_be/skio"
 	"food_delivery_be/subscriber"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+	jg "go.opencensus.io/exporter/jaeger"
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/trace"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"log"
+	"net/http"
 	"os"
 )
 
 func main() {
+	l := logrus.New()
+	l.SetFormatter(&logrus.JSONFormatter{})
+	l.SetLevel(logrus.ErrorLevel) // must use env for devops input 0 -> 6
+	l.Info("Test")
+	l.WithField("body", "body ne").Error("Error roi")
+
+
 	// refer https://github.com/go-sql-driver/mysql#dsn-data-source-name for details
 	dsn := os.Getenv("DatabaseConnectionStr")
 
@@ -39,11 +53,16 @@ func main() {
 	}
 	db = db.Debug()
 	fmt.Println("Connected to database")
-	runServices(db, s3Provider, secretKey)
+	if err := runServices(db, s3Provider, secretKey); err != nil {
+		log.Fatal(err)
+	}
 }
 
-func runServices(db *gorm.DB, upProvider uploadprovider.UploadProvider, secretKey string) {
+func runServices(db *gorm.DB, upProvider uploadprovider.UploadProvider, secretKey string) error {
 	appCtx := component.NewAppContent(db, upProvider, secretKey, pblocal.NewPubSub())
+
+	userStore := userstorage.NewSQLStore(appCtx.GetMainDBConnection())
+	userCaching := memcache.NewUserCaching(memcache.NewCaching(), userStore)
 
 	r := gin.Default()
 
@@ -70,20 +89,20 @@ func runServices(db *gorm.DB, upProvider uploadprovider.UploadProvider, secretKe
 
 	v1.POST("/register", ginuser.Register(appCtx))
 	v1.POST("/login", ginuser.Login(appCtx))
-	v1.GET("/profile", middleware.RequireAuth(appCtx), ginuser.GetProfile(appCtx))
+	v1.GET("/profile", middleware.RequireAuth(appCtx, userCaching), ginuser.GetProfile(appCtx))
 
-	restaurants := v1.Group("/restaurants")
+	restaurants := v1.Group( "/restaurants", middleware.RequireAuth(appCtx, userCaching))
 	{
-		restaurants.POST("", middleware.RequireAuth(appCtx), ginrestaurant.CreateRestaurant(appCtx))
-		restaurants.GET("/:id", middleware.RequireAuth(appCtx), ginrestaurant.GetRestaurant(appCtx))
-		restaurants.GET("", middleware.RequireAuth(appCtx), ginrestaurant.ListRestaurant(appCtx))
-		restaurants.PATCH("/:id", middleware.RequireAuth(appCtx), ginrestaurant.UpdateRestaurant(appCtx))
-		restaurants.DELETE("/:id", middleware.RequireAuth(appCtx), ginrestaurant.DeleteRestaurant(appCtx))
+		restaurants.POST("", ginrestaurant.CreateRestaurant(appCtx))
+		restaurants.GET("/:id", ginrestaurant.GetRestaurant(appCtx))
+		restaurants.GET("", ginrestaurant.ListRestaurant(appCtx))
+		restaurants.PATCH("/:id", ginrestaurant.UpdateRestaurant(appCtx))
+		restaurants.DELETE("/:id", ginrestaurant.DeleteRestaurant(appCtx))
 
-		restaurants.GET("/:id/liked-users", middleware.RequireAuth(appCtx), ginrestaurantlike.ListUserLikeRestaurant(appCtx))
+		restaurants.GET("/:id/liked-users",  ginrestaurantlike.ListUserLikeRestaurant(appCtx))
 
-		restaurants.POST("/:id/like", middleware.RequireAuth(appCtx), ginrestaurantlike.UserLikeRestaurant(appCtx))
-		restaurants.DELETE("/:id/unlike", middleware.RequireAuth(appCtx), ginrestaurantlike.UserUnLikeRestaurant(appCtx))
+		restaurants.POST("/:id/like", ginrestaurantlike.UserLikeRestaurant(appCtx))
+		restaurants.DELETE("/:id/unlike",  ginrestaurantlike.UserUnLikeRestaurant(appCtx))
 	}
 
 	v1.GET("encode-uid", func(c *gin.Context) {
@@ -100,7 +119,23 @@ func runServices(db *gorm.DB, upProvider uploadprovider.UploadProvider, secretKe
 		})
 	})
 
-	r.Run()
+	e, err := jg.NewExporter(jg.Options{
+		AgentEndpoint: "localhost:6831",
+		Process: jg.Process{ServiceName: "Food-Delivery"},
+	})
+	if err != nil {
+		log.Println(err)
+	}
+
+	trace.RegisterExporter(e)
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.ProbabilitySampler(1)})
+
+	return http.ListenAndServe(
+		":8080",
+		&ochttp.Handler{
+			Handler: r,
+		})
+	//return r.Run()
 }
 
 //
