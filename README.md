@@ -3,7 +3,7 @@
 #Apply architecture distributed system
 #Easy to convert to microservice
 
-# Câu thần chú
+# Thần chú
  - **Nginx proxy**: docker run -d -p 80:80 -p 443:443 --net my-net --name nginx-proxy -e ENABLE_IPV6=true -v ~/nginx-certs:/etc/nginx/certs:ro \
    -v ~/nginx/vhost.d:/etc/nginx/vhost.d \
    -v ~/nginx-logs:/var/log/nginx \
@@ -11,6 +11,8 @@
    -v /var/run/docker.sock:/tmp/docker.sock:ro \
    --privileged=true \
    jwilder/nginx-proxy
+   
+- **Nginx proxy docker advanced**: docker run -d -p 80:80 -p 443:443 -e DEFAULT_HOST=foodlive.tech -e HTTP_PORT=8080 -e HTTPS_PORT=8080 --net my-net --name nginx-proxy -e ENABLE_IPV6=true -v ~/nginx-certs:/etc/nginx/certs:ro -v ~/nginx/vhost.d:/etc/nginx/vhost.d -v ~/nginx-logs:/var/log/nginx -v /usr/share/nginx/html -v ~/nginx/sites-available:/etc/nginx/sites-available -v /var/run/docker.sock:/tmp/docker.sock:ro --privileged=true jwilder/nginx-proxy
 
 https://github.com/nginx-proxy/nginx-proxy
 
